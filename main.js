@@ -28,14 +28,13 @@ var app = http.createServer(function(request, response){
             
             var files = fs.readdirSync(testFolder);
             var title = queryData.id;
-            var readFiles = files;
             var fileList = madeLiTag(files);
 
             var description = fs.readFileSync(`data/${queryData.id}`, 'utf8')
                 
             temp = innerHTML(title, description, fileList,
                              `<a href="/create">create</a>
-                              <a href="/update">update</a>`);
+                              <a href="/update?id=${title}">update</a>`);
             
             
         }
@@ -47,10 +46,10 @@ var app = http.createServer(function(request, response){
     }else if(pathname === "/create"){
         console.log(pathname);
         var files = fs.readdirSync(testFolder);
-        var title = 'welcome';
+        var title = 'WEB - create';
         var fileList = madeLiTag(files)
         var description = `
-            <form action="http://localhost:3000/process_create" method="post">
+            <form action="http://localhost:3000/create_process" method="post">
             <p><input type="text" name="title" placeholder="title"></p>
             <p>
             <textarea name="description" placeholder="description"></textarea>
@@ -65,31 +64,67 @@ var app = http.createServer(function(request, response){
 
         response.writeHead(200);
         response.end(temp);
-    }else if(pathname === "/create"){
-        console.log(pathname);
-        var files = fs.readdirSync(testFolder);
-        var title = 'welcome';
-        var fileList = madeLiTag(files)
-        var description = `
-            <form action="http://localhost:3000/process_create" method="post">
-            <p><input type="text" name="title" placeholder="title"></p>
-            <p>
-            <textarea name="description" placeholder="description"></textarea>
-            </p>
-            <p>
-            <input type="submit">
-            </p>
-        </form>
-        `;
+    }else if(pathname === "/create_process"){
+        var body = '';
+        request.on('data', function(data){
+            body += data;
+        });
 
-        temp = innerHTML(title, description, fileList, '');
+        request.on('end', function(){
+            var post = qs.parse(body);
+            var title = post.title;
+            var description = post.description;
 
-        response.writeHead(200);
-        response.end(temp);
+            fs.write(`data/${title}`, description, 'utf8', function(err){
+                response.writeHead(302, {Location: `/?id=${title}`});
+                response.end();
+            });
+
+        })
+
+        
     }else if(pathname === "/update"){
 
+        var files = fs.readdirSync(testFolder);
+        var title = queryData.id;
+        var fileList = madeLiTag(files);
+        var description = fs.readFileSync(`data/${queryData.id}`, 'utf8');
+        var body = `
+                    <form action="http://localhost:3000/update_process" method="post">
+                        <input type="hidden" name="id" value="${title}">
+                        <p><input type="text" name="title" placeholder="title" value="${title}"></p>
+                        <p>
+                            <textarea name="description" placeholder="description">${description}</textarea>
+                        </p>
+                        <p>
+                            <input type="submit">
+                        </p>
+                    </form>
+        `;
+        temp = innerHTML(title, body, fileList, `<a href="/create">create</a> <a href="/update?id=${title}">update</a>`)
         response.writeHead(200);
-        response.end('success');
+        response.end(temp);
+        
+    }else if(pathname === "/update_process"){
+
+        var body = '';
+        request.on('data', function(data){
+            body += data;
+        });
+
+        request.on('end', function(){
+            var post = qs.parse(body);
+            var id = post.id;
+            var title = post.title;
+            var description = post.description;
+            fs.rename(`data/${id}`, `data/${title}`, function(error){
+                fs.writeFile(`data/${title}`, description, 'utf8', function(err){
+                    response.writeHead(302, {Location: `/?id=${title}`});
+                    response.end();
+                });
+            });
+
+        });
         
     }else{
         console.log("else");
