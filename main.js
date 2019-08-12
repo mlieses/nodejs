@@ -4,6 +4,39 @@ var url = require('url');
 var qs = require('querystring');
 var testFolder = './data/';
 
+var template = {
+    madeLiTag:function (readFiles){
+        var fileList = `
+        `;
+        for(var i=0;i<readFiles.length;i++){
+            fileList += `<li><a href="/?id=${readFiles[i]}">${readFiles[i]}</a></li>`
+        }
+        
+        return fileList;
+    },innerHTML:function (title, description, fileList, control){
+        return `
+            <!doctype html>
+            <html>
+            <head>
+            <title>WEB1 - ${title}</title>
+            <meta charset="utf-8">
+            </head>
+            <body>
+            <h1><a href="/">WEB</a></h1>
+            <ul>
+            ${fileList}
+            </ul>
+            ${control}
+            <h2>${title}</h2>
+            <p>
+            ${description}
+            </p>
+            </body>
+            </html>
+        `;
+    }
+}
+
 var app = http.createServer(function(request, response){
     var _url = request.url;
     var queryData = url.parse(_url, true).query;
@@ -19,20 +52,20 @@ var app = http.createServer(function(request, response){
             var files = fs.readdirSync(testFolder);    
             var title = 'welcome';
             var description = 'welcome to web';
-            var fileList = madeLiTag(files)
+            var fileList = template.madeLiTag(files)
             
-            temp = innerHTML(title, description, fileList,
+            temp = template.innerHTML(title, description, fileList,
                              `<a href="/create">create</a>`);
 
         }else{
             
             var files = fs.readdirSync(testFolder);
             var title = queryData.id;
-            var fileList = madeLiTag(files);
+            var fileList = template.madeLiTag(files);
 
             var description = fs.readFileSync(`data/${queryData.id}`, 'utf8')
                 
-            temp = innerHTML(title, description, fileList,
+            temp = template.innerHTML(title, description, fileList,
                              `<a href="/create">create</a>
                               <a href="/update?id=${title}">update</a>
                               <form action="delete_proccess" method="post" onsubmit="return confirm('정말로 삭제하시겠습니까?')">
@@ -52,7 +85,7 @@ var app = http.createServer(function(request, response){
         console.log(pathname);
         var files = fs.readdirSync(testFolder);
         var title = 'WEB - create';
-        var fileList = madeLiTag(files)
+        var fileList = template.madeLiTag(files)
         var description = `
             <form action="http://localhost:3000/create_process" method="post">
             <p><input type="text" name="title" placeholder="title"></p>
@@ -65,11 +98,12 @@ var app = http.createServer(function(request, response){
         </form>
         `;
 
-        temp = innerHTML(title, description, fileList, '');
+        temp = template.innerHTML(title, description, fileList, '');
 
         response.writeHead(200);
         response.end(temp);
     }else if(pathname === "/create_process"){
+        
         var body = '';
         request.on('data', function(data){
             body += data;
@@ -79,11 +113,14 @@ var app = http.createServer(function(request, response){
             var post = qs.parse(body);
             var title = post.title;
             var description = post.description;
+            console.log(title);
+            console.log(description);
 
-            fs.write(`data/${title}`, description, 'utf8', function(err){
+            fs.writeFile(`data/${title}`, description, 'utf8', function(err){
                 response.writeHead(302, {Location: `/?id=${title}`});
                 response.end();
             });
+            
 
         })
 
@@ -92,7 +129,7 @@ var app = http.createServer(function(request, response){
 
         var files = fs.readdirSync(testFolder);
         var title = queryData.id;
-        var fileList = madeLiTag(files);
+        var fileList = template.madeLiTag(files);
         var description = fs.readFileSync(`data/${queryData.id}`, 'utf8');
         var body = `
                     <form action="http://localhost:3000/update_process" method="post">
@@ -106,7 +143,7 @@ var app = http.createServer(function(request, response){
                         </p>
                     </form>
         `;
-        temp = innerHTML(title, body, fileList, `<a href="/create">create</a> <a href="/update?id=${title}">update</a>`)
+        temp = template.innerHTML(title, body, fileList, `<a href="/create">create</a> <a href="/update?id=${title}">update</a>`)
         response.writeHead(200);
         response.end(temp);
         
@@ -130,7 +167,7 @@ var app = http.createServer(function(request, response){
             });
         });
         
-    }else if(pathname === "/delete_process"){
+    }else if(pathname === "/delete_proccess"){
 
         var body = '';
         request.on('data', function(data){
@@ -155,36 +192,7 @@ var app = http.createServer(function(request, response){
 });
 app.listen(3000);
 
-function madeLiTag(readFiles){
-    var fileList = `
-    `;
-    for(var i=0;i<readFiles.length;i++){
-        fileList += `<li><a href="/?id=${readFiles[i]}">${readFiles[i]}</a></li>`
-    }
-    
-    return fileList;
-}
 
-function innerHTML(title, description, fileList, control){
-    return `
-        <!doctype html>
-        <html>
-        <head>
-        <title>WEB1 - ${title}</title>
-        <meta charset="utf-8">
-        </head>
-        <body>
-        <h1><a href="/">WEB</a></h1>
-        <ul>
-        ${fileList}
-        </ul>
-        ${control}
-        <h2>${title}</h2>
-        <p>
-        ${description}
-        </p>
-        </body>
-        </html>
-    `;
+
+
     
-}
